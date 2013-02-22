@@ -22,7 +22,7 @@ class ExpressionNodeTest(unittest.TestCase):
         result = node.value_in_point({'x': 2, 'y': 1})
         self.assertEqual(result, 1.0)
 
-    def test_simplify(self):
+    def test_simplify_two_numbers(self):
         node = Expression.Node('MINUS',
             left=Expression.Node('NUMBER', value=2),
             right=Expression.Node('NUMBER', value=2))
@@ -32,6 +32,23 @@ class ExpressionNodeTest(unittest.TestCase):
         self.assertEqual(node.right, None)
         self.assertEqual(node.value, 0.0)
 
+    def test_simplify_unary_and_number(self):
+        node = Expression.Node('SIN',
+            left=Expression.Node('NUMBER', value=0))
+        result = node.simplify()
+        self.assertEqual(result, True)
+        self.assertEqual(node.left, None)
+        self.assertEqual(node.value, 0.0)
+
+    def test_simplify_identical_variables_division(self):
+        node = Expression.Node('DIVISION',
+            left=Expression.Node('IDENTITY', value='x'),
+            right=Expression.Node('IDENTITY', value='x'))
+        result = node.simplify()
+        self.assertEqual(result, True)
+        self.assertEqual(node.left, None)
+        self.assertEqual(node.right, None)
+        self.assertEqual(node.value, 1.0)
 
 class FitnessFunctionTest(unittest.TestCase):
     def setUp(self):

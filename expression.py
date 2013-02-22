@@ -21,8 +21,7 @@ class Expression:
         'MULTIPLICATION': (False, lambda x, y: x * y, '*'),
         'DIVISION': (False, lambda x, y: x / y if y != 0 else x / 0.000001, '/'),
         'SIN': (True, lambda x: math.sin(x), 'sin'),
-        'COS': (True, lambda x: math.cos(x), 'cos'),
-        'TAN': (True, lambda x: math.tan(x), 'tg')
+        'COS': (True, lambda x: math.cos(x), 'cos')
     }
 
     class Node:
@@ -113,6 +112,11 @@ class Expression:
             of its subtrees was modified during the simplification.
             """
             #TODO: add more rules
+
+            #leave only 3 digits after decimal point
+            if self.is_number():
+                self.value = round(self.value * 1000) / 1000
+
             #calculate unary function for number
             if self.is_unary() and self.left.is_number():
                 self.value = self.value_in_point({})
@@ -124,6 +128,15 @@ class Expression:
             if (self.is_binary() and self.left.is_number()
                 and self.right.is_number()):
                 self.value = self.value_in_point({})
+                self.operation = 'NUMBER'
+                self.left = self.right = None
+                return True
+
+            #calculate x / x
+            if (self.is_binary() and
+                    self.left.is_variable() and self.right.is_variable() and
+                    self.left.value == self.right.value and self.operation == 'DIVISION'):
+                self.value = 1
                 self.operation = 'NUMBER'
                 self.left = self.right = None
                 return True
