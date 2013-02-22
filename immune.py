@@ -189,9 +189,10 @@ class ExpressionsImmuneSystem:
         """
         for i in range(0, self.number_of_lymphocytes):
             self.step()
-        self.best().simplify()
 
-        return self.best()
+        best = self.best()
+        best.simplify()
+        return best
 
     def step(self):
         """

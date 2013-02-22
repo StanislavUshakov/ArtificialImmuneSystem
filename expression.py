@@ -141,6 +141,15 @@ class Expression:
                 self.left = self.right = None
                 return True
 
+            #calculate x - x
+            if (self.is_binary() and
+                self.left.is_variable() and self.right.is_variable() and
+                self.left.value == self.right.value and self.operation == 'MINUS'):
+                self.value = 0
+                self.operation = 'NUMBER'
+                self.left = self.right = None
+                return True
+
             result = False
             if self.left is not None:
                 result_left = self.left.simplify()
@@ -299,9 +308,7 @@ class Expression:
         Simplifies entire expression tree.
         While we have changes in the tree - call simplify.
         """
-        result = self.root.simplify()
-        while result:
-            result = self.root.simplify()
+        while self.root.simplify(): pass
 
     def __str__(self):
         """
