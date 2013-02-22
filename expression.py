@@ -143,9 +143,11 @@ class Expression:
 
             result = False
             if self.left is not None:
-                result = result or self.left.simplify()
+                result_left = self.left.simplify()
+                result = result or result_left
             if self.right is not None:
-                result = result or self.right.simplify()
+                result_right = self.right.simplify()
+                result = result or result_right
 
             return result
 
@@ -297,7 +299,9 @@ class Expression:
         Simplifies entire expression tree.
         While we have changes in the tree - call simplify.
         """
-        while self.root.simplify(): pass
+        result = self.root.simplify()
+        while result:
+            result = self.root.simplify()
 
     def __str__(self):
         """
