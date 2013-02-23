@@ -150,11 +150,10 @@ class ExpressionsImmuneSystem:
     Now - this is simply algorithm, that works for a number of steps.
     On each step the best lymphocytes are selected for the mutation.
     """
-    maximal_height = 4
-    number_of_lymphocytes = 100
-    number_of_iterations = 30
 
-    def __init__(self, exact_values, variables, **configuration):
+    def __init__(self, exact_values, variables,
+                 number_of_lymphocytes=100, number_of_iterations=50,
+                 maximal_height=4):
         """
         Initializes the immune system with the provided parameters (or
         default parameters if not provided).
@@ -165,19 +164,13 @@ class ExpressionsImmuneSystem:
         self.fitness_function = FitnessFunction(exact_values)
 
         #config
-        self.number_of_lymphocytes = (
-            configuration['number_of_lymphocytes']
-            if 'number_of_lymphocytes' in configuration
-            else ExpressionsImmuneSystem.number_of_lymphocytes)
-        self.number_of_iterations = (
-            configuration['number_of_iterations']
-            if 'number_of_iterations' in configuration
-            else ExpressionsImmuneSystem.number_of_iterations)
+        self.number_of_lymphocytes = number_of_lymphocytes
+        self.number_of_iterations = number_of_iterations
 
         self.lymphocytes = []
         for i in range(0, self.number_of_lymphocytes):
             self.lymphocytes.append(Expression.generate_random(
-                                        ExpressionsImmuneSystem.maximal_height,
+                                        maximal_height,
                                         variables))
 
         random.seed()
