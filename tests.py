@@ -50,6 +50,24 @@ class ExpressionNodeTest(unittest.TestCase):
         self.assertEqual(node.right, None)
         self.assertEqual(node.value, 1.0)
 
+    def test_simplify_multiply_by_one_right(self):
+        node = Expression.Node('MULTIPLICATION',
+            left=Expression.Node('IDENTITY', value='x'),
+            right=Expression.Node('NUMBER', value=1))
+        result = node.simplify()
+        self.assertEqual(result, True)
+        self.assertEqual(node.operation, 'IDENTITY')
+        self.assertEqual(node.value, 'x')
+
+    def test_simplify_multiply_by_one_left(self):
+        node = Expression.Node('MULTIPLICATION',
+            left=Expression.Node('NUMBER', value=1),
+            right=Expression.Node('IDENTITY', value='x'))
+        result = node.simplify()
+        self.assertEqual(result, True)
+        self.assertEqual(node.operation, 'IDENTITY')
+        self.assertEqual(node.value, 'x')
+
 class FitnessFunctionTest(unittest.TestCase):
     def setUp(self):
         values = [({'x': i , 'y': j}, 4 * i + 2 * j)
@@ -98,21 +116,3 @@ class ExpressionMutatorTest(unittest.TestCase):
         original_value = self.f.value_in_point(point)
         mutated_value = mutator.expression.value_in_point(point)
         self.assertNotEqual(original_value, mutated_value)
-
-class ExpressionsImmuneSystemTest(unittest.TestCase):
-    def setUp(self):
-        self.values = [({'x': i , 'y': j}, 4 * i + 2 * j)
-                  for i in range(0, 20)
-                  for j in range(0, 20)]
-
-    def test_that_best_is_returned(self):
-        immuneSystem = ExpressionsImmuneSystem(exact_values=self.values,
-                                               variables=['x', 'y'],
-                                               number_of_lymphocytes=10,
-                                               number_of_iterations=2)
-        f = FitnessFunction(exact_values=self.values)
-        best = immuneSystem.solve()
-        first = immuneSystem.lymphocytes[0]
-        second = immuneSystem.lymphocytes[1]
-        self.assertLessEqual(f.expression_value(best), f.expression_value(first))
-        self.assertLessEqual(f.expression_value(best), f.expression_value(second))

@@ -182,13 +182,17 @@ class ExpressionsImmuneSystem:
 
         random.seed()
 
-    def solve(self):
+    def solve(self, accuracy=0.001):
         """
         After defined number of steps returns the best lymphocyte as
         an answer.
         """
         for i in range(0, self.number_of_lymphocytes):
             self.step()
+            best = self.best()
+            if self.fitness_function.expression_value(best) <= accuracy:
+                best.simplify()
+                return best
 
         best = self.best()
         best.simplify()

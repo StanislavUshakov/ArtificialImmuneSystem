@@ -104,7 +104,7 @@ class Expression:
             """
             return not Expression.allowed_operations[self.operation][0]
 
-        def simplify(self):
+        def simplify(self, accuracy=0.001):
             """
             Simplifies the current node and all its subtrees according
             to the simple arithmetic rules.
@@ -125,8 +125,8 @@ class Expression:
                 return True
 
             #calculate binary function for two numbers
-            if (self.is_binary() and self.left.is_number()
-                and self.right.is_number()):
+            if (self.is_binary() and self.left.is_number() and
+                    self.right.is_number()):
                 self.value = self.value_in_point({})
                 self.operation = 'NUMBER'
                 self.left = self.right = None
@@ -143,11 +143,27 @@ class Expression:
 
             #calculate x - x
             if (self.is_binary() and
-                self.left.is_variable() and self.right.is_variable() and
-                self.left.value == self.right.value and self.operation == 'MINUS'):
+                    self.left.is_variable() and self.right.is_variable() and
+                    self.left.value == self.right.value and self.operation == 'MINUS'):
                 self.value = 0
                 self.operation = 'NUMBER'
                 self.left = self.right = None
+                return True
+
+            #calculate x * 1 and x / 1
+            if (self.is_binary() and
+                    self.right.is_number() and abs(self.right.value - 1) < accuracy and
+                    (self.operation == 'DIVISION' or self.operation == 'MULTIPLICATION')):
+                self._init_with_node(self.left)
+                self.simplify()
+                return True
+
+            #calculate 1 * x
+            if (self.is_binary() and
+                    self.left.is_number() and abs(self.left.value - 1) < accuracy and
+                    self.operation == 'MULTIPLICATION'):
+                self._init_with_node(self.right)
+                self.simplify()
                 return True
 
             result = False
@@ -159,6 +175,12 @@ class Expression:
                 result = result or result_right
 
             return result
+
+        def _init_with_node(self, node):
+            self.operation = node.operation
+            self.value = node.value
+            self.left = node.left
+            self.right = node.right
 
         def __str__(self):
             """
