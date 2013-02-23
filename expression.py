@@ -5,42 +5,102 @@ import math
 
 class NotSupportedOperationError(Exception): pass
 
+class Operations:
+    """
+    Class represents all possible operations.
+    """
+    _number = 0
+    _variable = 1
+    _unary_operation = 2
+    _binary_operation = 3
+
+    class Operation:
+        """
+        Class represents single operation.
+        It isn't supposed to create instances of Operation class in code.
+        Operations.{OPERATION} must be used instead.
+        is_unary - True, if operation is unary
+        action - function that returns result of this operation (1 or 2 arguments)
+        string_representation - for printing expressions
+        """
+        def __init__(self, operation_type, action, string_representation=''):
+            self._operation_type = operation_type
+            self.action = action
+            self.string_representation = string_representation
+
+        def is_number(self):
+            return self._operation_type == Operations._number
+
+        def is_variable(self):
+            return  self._operation_type == Operations._variable
+
+        def is_unary(self):
+            return  self._operation_type == Operations._unary_operation
+
+        def is_binary(self):
+            return  self._operation_type == Operations._binary_operation
+
+    NUMBER = Operation(operation_type=_number,
+                       action=(lambda x: x))
+    IDENTITY = Operation(operation_type=_variable,
+                         action=(lambda x: x))
+    PLUS =  Operation(operation_type=_binary_operation,
+                      action=(lambda x, y: x + y),
+                      string_representation='+')
+    MINUS = Operation(operation_type=_binary_operation,
+                      action=(lambda x, y: x - y),
+                      string_representation='-')
+    MULTIPLICATION = Operation(operation_type=_binary_operation,
+                               action=(lambda x, y: x * y),
+                               string_representation='*')
+    DIVISION = Operation(operation_type=_binary_operation,
+                         action=(lambda x, y: x / y if y != 0 else x / 0.000001),
+                         string_representation='/')
+    SIN = Operation(operation_type=_unary_operation,
+                    action=(lambda x: math.sin(x)),
+                    string_representation='sin')
+    COS = Operation(operation_type=_unary_operation,
+                    action=(lambda x: math.cos(x)),
+                    string_representation='cos')
+
+    @classmethod
+    def get_unary_operations(cls):
+        """
+        Returns list of unary operations.
+        Number and variable are not unary operations
+        """
+        return [Operations.SIN, Operations.COS]
+
+    @classmethod
+    def get_binary_operations(cls):
+        """
+        Returns list of all possible binary operations
+        """
+        return [Operations.PLUS, Operations.MINUS, Operations.MULTIPLICATION, Operations.DIVISION]
+
 class Expression:
     """
     This class is used for representing expression tree.
     Root of the tree is stored in root field.
-    List of all possible variable names is stored in variables field.
-    All operations are stored in class field allowed_operations in the following form:
-        NAME: (IsUnary, FunctionToGetValue, StringRepresentation)
     """
-    allowed_operations = {
-        'NUMBER': (True, lambda x: x),
-        'IDENTITY': (True, lambda x: x),
-        'PLUS': (False, lambda x, y: x + y, '+'),
-        'MINUS': (False, lambda x, y: x - y, '-'),
-        'MULTIPLICATION': (False, lambda x, y: x * y, '*'),
-        'DIVISION': (False, lambda x, y: x / y if y != 0 else x / 0.000001, '/'),
-        'SIN': (True, lambda x: math.sin(x), 'sin'),
-        'COS': (True, lambda x: math.cos(x), 'cos')
-    }
 
     class Node:
         """
         This class is used for representing node of the expression tree.
         left and right - references to the left and right subtrees respectively.
-        operation - name of operation (dictionary key in Expression.allowed_operations).
-        value - contains number if operation = 'NUMBER' or variable name if
-        operation = 'IDENTITY'
+        operation - Operation object.
+        value - contains number if operation = NUMBER or variable name if
+        operation = IDENTITY
         """
         def __init__(self, operation, left=None, right=None, value=None):
             """
             Initializes node of the expression tree.
-            operation - name of the operation, must be passed only predefined value.
+            operation - Operation object.
             If not - NotSupportedOperationError is thrown.
             Also left and right subtrees may be passed.
-            value - only for 'NUMBER' and 'IDENTITY'.
+            value - only for NUMBER and IDENTITY.
             """
-            if operation not in Expression.allowed_operations:
+            if not isinstance(operation, Operations.Operation):
                 raise NotSupportedOperationError(operation)
             self.operation = operation
             self.left = left
@@ -54,17 +114,16 @@ class Expression:
             values - dictionary containing values for all needed variables, e.g.
             {'x': 1, 'y': 2}
             """
-            if self.operation =='NUMBER':
+            if self.is_number():
                 return self.value
-            if self.operation == 'IDENTITY':
+            if self.is_variable():
                 return values[self.value]
 
-            op = Expression.allowed_operations[self.operation]
-            if op[0]:
-                return op[1](self.left.value_in_point(values))
+            if self.is_unary():
+                return self.operation.action(self.left.value_in_point(values))
 
-            return op[1](self.left.value_in_point(values),
-                self.right.value_in_point(values))
+            return self.operation.action(self.left.value_in_point(values),
+                                         self.right.value_in_point(values))
 
         def height(self):
             """
@@ -82,27 +141,26 @@ class Expression:
             """
             Returns True only if the current node represents a number.
             """
-            return self.operation == 'NUMBER'
+            return self.operation.is_number()
 
         def is_variable(self):
             """
             Returns True only if the current node represents a variable.
             """
-            return self.operation == 'IDENTITY'
+            return self.operation.is_variable()
 
         def is_unary(self):
             """
             Returns True only if the current node represents an unary operation.
             Number and variable are not considered as unary operations.
             """
-            return (Expression.allowed_operations[self.operation][0] and
-                    self.operation != 'NUMBER' and self.operation != 'IDENTITY')
+            return self.operation.is_unary()
 
         def is_binary(self):
             """
             Returns True only if the current node represents a binary operations.
             """
-            return not Expression.allowed_operations[self.operation][0]
+            return self.operation.is_binary()
 
         def simplify(self, accuracy=0.001):
             """
@@ -120,7 +178,7 @@ class Expression:
             #calculate unary function for number
             if self.is_unary() and self.left.is_number():
                 self.value = self.value_in_point({})
-                self.operation = 'NUMBER'
+                self.operation = Operations.NUMBER
                 self.left = None
                 return True
 
@@ -128,32 +186,32 @@ class Expression:
             if (self.is_binary() and self.left.is_number() and
                     self.right.is_number()):
                 self.value = self.value_in_point({})
-                self.operation = 'NUMBER'
+                self.operation = Operations.NUMBER
                 self.left = self.right = None
                 return True
 
             #calculate x / x
             if (self.is_binary() and
                     self.left.is_variable() and self.right.is_variable() and
-                    self.left.value == self.right.value and self.operation == 'DIVISION'):
+                    self.left.value == self.right.value and self.operation == Operations.DIVISION):
                 self.value = 1
-                self.operation = 'NUMBER'
+                self.operation = Operations.NUMBER
                 self.left = self.right = None
                 return True
 
             #calculate x - x
             if (self.is_binary() and
                     self.left.is_variable() and self.right.is_variable() and
-                    self.left.value == self.right.value and self.operation == 'MINUS'):
+                    self.left.value == self.right.value and self.operation == Operations.MINUS):
                 self.value = 0
-                self.operation = 'NUMBER'
+                self.operation = Operations.NUMBER
                 self.left = self.right = None
                 return True
 
             #calculate x * 1 and x / 1
             if (self.is_binary() and
                     self.right.is_number() and abs(self.right.value - 1) < accuracy and
-                    (self.operation == 'DIVISION' or self.operation == 'MULTIPLICATION')):
+                    (self.operation == Operations.DIVISION or self.operation == Operations.MULTIPLICATION)):
                 self._init_with_node(self.left)
                 self.simplify()
                 return True
@@ -161,7 +219,7 @@ class Expression:
             #calculate 1 * x
             if (self.is_binary() and
                     self.left.is_number() and abs(self.left.value - 1) < accuracy and
-                    self.operation == 'MULTIPLICATION'):
+                    self.operation == Operations.MULTIPLICATION):
                 self._init_with_node(self.right)
                 self.simplify()
                 return True
@@ -189,16 +247,15 @@ class Expression:
             All binary operation has a pair of parentheses.
             """
             if self.is_number() or self.is_variable():
-                return str(self.value) if self.value is not None else 'None'
+                return str(self.value)
 
             if self.is_unary():
-                return Expression.allowed_operations[self.operation][2] + '(' +\
+                return self.operation.string_representation + '(' +\
                        (str(self.left) if self.left is not None else 'None') + ')'
 
             if self.is_binary():
                 return '(' + (str(self.left) if self.left is not None else 'None') +\
-                       ' ' + Expression.allowed_operations[
-                             self.operation][2] + ' ' +\
+                       ' ' + self.operation.string_representation + ' ' +\
                        (str(self.right) if self.right is not None else 'None') + ')'
 
         def __repr__(self):
@@ -209,29 +266,11 @@ class Expression:
             return str(self)
 
     @classmethod
-    def get_unary_operations(cls):
-        """
-        Returns list of unary operations.
-        Number and variable are not unary operations
-        """
-        return [x for x in Expression.allowed_operations
-                if Expression.allowed_operations[x][0] and
-                   x != 'NUMBER' and x != 'IDENTITY']
-
-    @classmethod
-    def get_binary_operations(cls):
-        """
-        Returns list of all possible binary operations
-        """
-        return [x for x in Expression.allowed_operations
-                if not Expression.allowed_operations[x][0]]
-
-    @classmethod
     def generate_number(cls):
         """
         Returns randomly generated number in [-100, 100]
         """
-        return (random.randint(-10, 10) / random.random() + 0.01) % 100
+        return (random.random() - 0.5) * 200
 
     @classmethod
     def generate_operator(cls, only_binary:bool=False):
@@ -241,11 +280,11 @@ class Expression:
         of an unary operation.
         IF isBinary = True returns binary operation
         """
-        if only_binary or random.random() < 0.6:
-            return random.choice(Expression.get_binary_operations())
+        if only_binary or random.random() < 0.75:
+            return random.choice(Operations.get_binary_operations())
         else:
-            return random.choice(Expression.get_unary_operations() +
-                                 Expression.get_binary_operations())
+            return random.choice(Operations.get_unary_operations() +
+                                 Operations.get_binary_operations())
 
     @classmethod
     def generate_random(cls, max_height, variables):
@@ -303,10 +342,10 @@ class Expression:
 
         for node in leaves:
             if random.random() > 0.5:
-                node.operation = 'NUMBER'
+                node.operation = Operations.NUMBER
                 node.value = Expression.generate_number()
             else:
-                node.operation = 'IDENTITY'
+                node.operation = Operations.IDENTITY
                 node.value = random.choice(variables)
 
         return Expression(root=root, variables=variables)

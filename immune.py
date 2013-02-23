@@ -4,7 +4,7 @@ import math
 import random
 import copy
 
-from expression import Expression
+from expression import Expression, Operations
 
 class FitnessFunction:
     """
@@ -97,7 +97,7 @@ class ExpressionMutator:
         if not unary_operations: return
 
         selected_unary = random.choice(unary_operations)
-        selected_unary.operation = random.choice(self.expression.get_unary_operations())
+        selected_unary.operation = random.choice(Operations.get_unary_operations())
 
     def binary_mutation(self):
         """
@@ -107,7 +107,7 @@ class ExpressionMutator:
         if not binary_operations: return
 
         selected_binary = random.choice(binary_operations)
-        selected_binary.operation = random.choice(self.expression.get_binary_operations())
+        selected_binary.operation = random.choice(Operations.get_binary_operations())
 
     def subtree_mutation(self):
         """
@@ -187,7 +187,7 @@ class ExpressionsImmuneSystem:
         After defined number of steps returns the best lymphocyte as
         an answer.
         """
-        for i in range(0, self.number_of_lymphocytes):
+        for i in range(0, self.number_of_iterations):
             self.step()
             best = self.best()
             if self.fitness_function.expression_value(best) <= accuracy:
