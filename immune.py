@@ -151,8 +151,9 @@ class ExpressionsImmuneSystem:
     On each step the best lymphocytes are selected for the mutation.
     """
 
-    def __init__(self, exact_values, variables,
+    def __init__(self, exact_values, variables, exchanger,
                  number_of_lymphocytes=100, number_of_iterations=50,
+                 number_of_iterations_to_exchange=25,
                  maximal_height=4):
         """
         Initializes the immune system with the provided parameters (or
@@ -162,16 +163,21 @@ class ExpressionsImmuneSystem:
         self.exact_values = exact_values
         self.variables = variables
         self.fitness_function = FitnessFunction(exact_values)
+        self.exchanger = exchanger
 
         #config
         self.number_of_lymphocytes = number_of_lymphocytes
         self.number_of_iterations = number_of_iterations
+        self.number_of_iterations_to_exchange = number_of_iterations_to_exchange
 
         self.lymphocytes = []
         for i in range(0, self.number_of_lymphocytes):
             self.lymphocytes.append(Expression.generate_random(
                                         maximal_height,
                                         variables))
+
+        #Initialize Exchanger with the first generated lymphocytes
+        self.exchanger.set_lymphocytes_to_exchange(self.lymphocytes[:])
 
         random.seed()
 
@@ -181,7 +187,11 @@ class ExpressionsImmuneSystem:
         an answer.
         """
         for i in range(0, self.number_of_iterations):
-            self.step()
+            #if we reach exchanging step
+            if i % self.number_of_iterations_to_exchange:
+                self.exchanging_step()
+            else:
+                self.step()
             best = self.best()
             if self.fitness_function.expression_value(best) <= accuracy:
                 best.simplify()
@@ -203,6 +213,24 @@ class ExpressionsImmuneSystem:
             best.append(self.lymphocytes[i])
         mutated = [ExpressionMutator(e).mutation() for e in best]
         self.lymphocytes = best + mutated
+
+    def exchanging_step(self):
+        """
+        Represents the step when we're getting lymphocytes from the other node.
+        Take some lymphocytes from the exchanger and merge them with current available.
+        Also set new lymphocytes to exchange (exactly - copy of them)
+        """
+        self.exchanger.set_lymphocytes_to_exchange(self.lymphocytes[:])
+        others = self.exchanger.get_lymphocytes()
+        self.lymphocytes = self.lymphocytes + others
+
+        #get only best - as many as we need
+        sorted_lymphocytes = self._get_sorted_lymphocytes_index_and_value()
+        best = []
+        for (i, e) in sorted_lymphocytes[:self.number_of_lymphocytes]:
+            best.append(self.lymphocytes[i])
+
+        self.lymphocytes = best
 
     def best(self):
         """
