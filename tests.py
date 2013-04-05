@@ -4,6 +4,8 @@ import unittest
 
 from expression import Expression, NotSupportedOperationError, Operations
 from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem
+from exchanger import SimpleRandomExchanger
+
 
 class ExpressionNodeTest(unittest.TestCase):
     def test_allowed_operation(self):
@@ -125,10 +127,14 @@ class ExpressionsImmuneSystemTest(unittest.TestCase):
             values.append(({'x': x}, x * x ))
 
         f = FitnessFunction(values)
+        exchanger = SimpleRandomExchanger(
+            lambda: [Expression.generate_random(max_height=2, variables=['x'])
+                     for i in range(0, 5)])
 
         immuneSystem = ExpressionsImmuneSystem(exact_values=values,
                 variables=['x'],
                 number_of_lymphocytes=10,
-                number_of_iterations=5)
+                number_of_iterations=5,
+                exchanger=exchanger)
         best = immuneSystem.solve()
         self.assertGreaterEqual(f.expression_value(best), 0)
