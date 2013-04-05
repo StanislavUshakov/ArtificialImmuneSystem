@@ -1,11 +1,38 @@
 __author__ = 'Stanislav Ushakov'
 
 import unittest
+import pickle
 
 from expression import Expression, NotSupportedOperationError, Operations
 from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem
 from exchanger import SimpleRandomExchanger
 
+class OperationTest(unittest.TestCase):
+    def test_pickle_number(self):
+        operation = Operations.NUMBER
+        returned_operation = pickle.loads(pickle.dumps(operation))
+        self._test_for_equality(operation, returned_operation)
+
+    def test_pickle_variable(self):
+        operation = Operations.IDENTITY
+        returned_operation = pickle.loads(pickle.dumps(operation))
+        self._test_for_equality(operation, returned_operation)
+
+    def test_pickle_unary(self):
+        operation = Operations.SIN
+        returned_operation = pickle.loads(pickle.dumps(operation))
+        self._test_for_equality(operation, returned_operation)
+
+    def test_pickle_binary(self):
+        operation = Operations.MINUS
+        returned_operation = pickle.loads(pickle.dumps(operation))
+        self._test_for_equality(operation, returned_operation)
+
+    def _test_for_equality(self, op1, op2):
+        self.assertEqual(op1._operation_type, op2._operation_type)
+        self.assertEqual(op1.action, op2.action)
+        if hasattr(op1, 'string_representation'):
+            self.assertEqual(op1.string_representation, op2.string_representation)
 
 class ExpressionNodeTest(unittest.TestCase):
     def test_allowed_operation(self):
