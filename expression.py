@@ -5,6 +5,74 @@ import math
 
 class NotSupportedOperationError(Exception): pass
 
+class Operation:
+    """
+    Class represents single operation.
+    It isn't supposed to create instances of Operation class in code.
+    Operations.{OPERATION} must be used instead.
+    is_unary - True, if operation is unary
+    action - function that returns result of this operation (1 or 2 arguments)
+    string_representation - for printing expressions
+    """
+    def __init__(self, operation_type, action, string_representation=''):
+        self._operation_type = operation_type
+        self.action = action
+        self.string_representation = string_representation
+
+    def is_number(self):
+        return self._operation_type == Operations._number
+
+    def is_variable(self):
+        return  self._operation_type == Operations._variable
+
+    def is_unary(self):
+        return  self._operation_type == Operations._unary_operation
+
+    def is_binary(self):
+        return  self._operation_type == Operations._binary_operation
+
+    #ugly stuff for serializing
+
+    _dict_key = 'operation'
+
+    def __getstate__(self):
+        """
+        Because of problems with pickle, have to override this method.
+        """
+        if self._operation_type == Operations._number:
+            return {self._dict_key : 'number'}
+        if self._operation_type == Operations._variable:
+            return {self._dict_key : 'variable'}
+        return {self._dict_key : self.string_representation}
+
+    def __setstate__(self, state):
+        """
+        Initializes operation where unpickling
+        """
+        if state[self._dict_key] == 'number':
+            operator = Operations.NUMBER
+        elif state[self._dict_key] == 'variable':
+            operator = Operations.IDENTITY
+        elif state[self._dict_key] == '+':
+            operator = Operations.PLUS
+        elif state[self._dict_key] == '-':
+            operator = Operations.MINUS
+        elif state[self._dict_key] == '*':
+            operator = Operations.MULTIPLICATION
+        elif state[self._dict_key] == '/':
+            operator = Operations.DIVISION
+        elif state[self._dict_key] == 'sin':
+            operator = Operations.SIN
+        elif state[self._dict_key] == 'cos':
+            operator = Operations.COS
+        self._init_from_operation(operator)
+
+    def _init_from_operation(self, operation):
+        self._operation_type = operation._operation_type
+        self.action = operation.action
+        if hasattr(operation, 'string_representation'):
+            self.string_representation = operation.string_representation
+
 class Operations:
     """
     Class represents all possible operations.
@@ -13,32 +81,6 @@ class Operations:
     _variable = 1
     _unary_operation = 2
     _binary_operation = 3
-
-    class Operation:
-        """
-        Class represents single operation.
-        It isn't supposed to create instances of Operation class in code.
-        Operations.{OPERATION} must be used instead.
-        is_unary - True, if operation is unary
-        action - function that returns result of this operation (1 or 2 arguments)
-        string_representation - for printing expressions
-        """
-        def __init__(self, operation_type, action, string_representation=''):
-            self._operation_type = operation_type
-            self.action = action
-            self.string_representation = string_representation
-
-        def is_number(self):
-            return self._operation_type == Operations._number
-
-        def is_variable(self):
-            return  self._operation_type == Operations._variable
-
-        def is_unary(self):
-            return  self._operation_type == Operations._unary_operation
-
-        def is_binary(self):
-            return  self._operation_type == Operations._binary_operation
 
     NUMBER = Operation(operation_type=_number,
                        action=(lambda x: x))
@@ -100,7 +142,7 @@ class Expression:
             Also left and right subtrees may be passed.
             value - only for NUMBER and IDENTITY.
             """
-            if not isinstance(operation, Operations.Operation):
+            if not isinstance(operation, Operation):
                 raise NotSupportedOperationError(operation)
             self.operation = operation
             self.left = left
