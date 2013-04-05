@@ -120,192 +120,218 @@ class Operations:
         """
         return [Operations.PLUS, Operations.MINUS, Operations.MULTIPLICATION, Operations.DIVISION]
 
+class Node:
+    """
+    This class is used for representing node of the expression tree.
+    left and right - references to the left and right subtrees respectively.
+    operation - Operation object.
+    value - contains number if operation = NUMBER or variable name if
+    operation = IDENTITY
+    """
+    def __init__(self, operation, left=None, right=None, value=None):
+        """
+        Initializes node of the expression tree.
+        operation - Operation object.
+        If not - NotSupportedOperationError is thrown.
+        Also left and right subtrees may be passed.
+        value - only for NUMBER and IDENTITY.
+        """
+        if not isinstance(operation, Operation):
+            raise NotSupportedOperationError(operation)
+        self.operation = operation
+        self.left = left
+        self.right = right
+        self.value = value
+
+    def value_in_point(self, values):
+        """
+        Return value in the current node, calculated for provided
+        values of the variables.
+        values - dictionary containing values for all needed variables, e.g.
+        {'x': 1, 'y': 2}
+        """
+        if self.is_number():
+            return self.value
+        if self.is_variable():
+            return values[self.value]
+
+        if self.is_unary():
+            return self.operation.action(self.left.value_in_point(values))
+
+        return self.operation.action(self.left.value_in_point(values),
+            self.right.value_in_point(values))
+
+    def height(self):
+        """
+        Returns height of the tree which root is the current node.
+        """
+        if self.is_number() or self.is_variable():
+            return 1
+        if self.is_unary():
+            return self.left.height() if self.left is not None else 0 + 1
+
+        return max(self.left.height() if self.left is not None else 0,
+            self.right.height() if self.right is not None else 0) + 1
+
+    def is_number(self):
+        """
+        Returns True only if the current node represents a number.
+        """
+        return self.operation.is_number()
+
+    def is_variable(self):
+        """
+        Returns True only if the current node represents a variable.
+        """
+        return self.operation.is_variable()
+
+    def is_unary(self):
+        """
+        Returns True only if the current node represents an unary operation.
+        Number and variable are not considered as unary operations.
+        """
+        return self.operation.is_unary()
+
+    def is_binary(self):
+        """
+        Returns True only if the current node represents a binary operations.
+        """
+        return self.operation.is_binary()
+
+    def simplify(self, accuracy=0.001):
+        """
+        Simplifies the current node and all its subtrees according
+        to the simple arithmetic rules.
+        Return True only if the current node or at least one
+        of its subtrees was modified during the simplification.
+        """
+        #TODO: add more rules
+
+        #leave only 3 digits after decimal point
+        if self.is_number():
+            self.value = round(self.value * 1000) / 1000
+
+        #calculate unary function for number
+        if self.is_unary() and self.left.is_number():
+            self.value = self.value_in_point({})
+            self.operation = Operations.NUMBER
+            self.left = None
+            return True
+
+        #calculate binary function for two numbers
+        if (self.is_binary() and self.left.is_number() and
+            self.right.is_number()):
+            self.value = self.value_in_point({})
+            self.operation = Operations.NUMBER
+            self.left = self.right = None
+            return True
+
+        #calculate x / x
+        if (self.is_binary() and
+            self.left.is_variable() and self.right.is_variable() and
+            self.left.value == self.right.value and self.operation == Operations.DIVISION):
+            self.value = 1
+            self.operation = Operations.NUMBER
+            self.left = self.right = None
+            return True
+
+        #calculate x - x
+        if (self.is_binary() and
+            self.left.is_variable() and self.right.is_variable() and
+            self.left.value == self.right.value and self.operation == Operations.MINUS):
+            self.value = 0
+            self.operation = Operations.NUMBER
+            self.left = self.right = None
+            return True
+
+        #calculate x * 1 and x / 1
+        if (self.is_binary() and
+            self.right.is_number() and abs(self.right.value - 1) < accuracy and
+            (self.operation == Operations.DIVISION or self.operation == Operations.MULTIPLICATION)):
+            self._init_with_node(self.left)
+            self.simplify()
+            return True
+
+        #calculate 1 * x
+        if (self.is_binary() and
+            self.left.is_number() and abs(self.left.value - 1) < accuracy and
+            self.operation == Operations.MULTIPLICATION):
+            self._init_with_node(self.right)
+            self.simplify()
+            return True
+
+        result = False
+        if self.left is not None:
+            result_left = self.left.simplify()
+            result = result or result_left
+        if self.right is not None:
+            result_right = self.right.simplify()
+            result = result or result_right
+
+        return result
+
+    def _init_with_node(self, node):
+        self.operation = node.operation
+        self.value = node.value
+        self.left = node.left
+        self.right = node.right
+
+    def __str__(self):
+        """
+        Returns string representation of tree which root is the
+        current node.
+        All binary operation has a pair of parentheses.
+        """
+        if self.is_number() or self.is_variable():
+            return str(self.value)
+
+        if self.is_unary():
+            return self.operation.string_representation + '(' +\
+                   (str(self.left) if self.left is not None else 'None') + ')'
+
+        if self.is_binary():
+            return '(' + (str(self.left) if self.left is not None else 'None') +\
+                   ' ' + self.operation.string_representation + ' ' +\
+                   (str(self.right) if self.right is not None else 'None') + ')'
+
+    def __repr__(self):
+        """
+        Doesn't return valid Python expression.
+        Returns the same string representation as __str__ does.
+        """
+        return str(self)
+
+    #serializing stuff
+    _left_node_dict_key = 'left'
+    _right_node_dict_key = 'right'
+    _operation_dict_key = 'operation'
+    _value_dict_key = 'value'
+
+    def __getstate__(self):
+        result = {self._operation_dict_key: self.operation.__getstate__(),
+                  self._value_dict_key: self.value}
+        if self.left is not None:
+            result[self._left_node_dict_key] = self.left.__getstate__()
+        if self.right is not None:
+            result[self._right_node_dict_key] = self.right.__getstate__()
+        return result
+
+    def __setstate__(self, state):
+        self.value = state[self._value_dict_key]
+        self.operation = Operation(None, None)
+        self.operation.__setstate__(state[self._operation_dict_key])
+        if self._left_node_dict_key in state:
+            self.left = Node(Operations.NUMBER)
+            self.left.__setstate__(state[self._left_node_dict_key])
+        if self._right_node_dict_key in state:
+            self.right = Node(Operations.NUMBER)
+            self.right.__setstate__(state[self._right_node_dict_key])
+
 class Expression:
     """
     This class is used for representing expression tree.
     Root of the tree is stored in root field.
     """
-
-    class Node:
-        """
-        This class is used for representing node of the expression tree.
-        left and right - references to the left and right subtrees respectively.
-        operation - Operation object.
-        value - contains number if operation = NUMBER or variable name if
-        operation = IDENTITY
-        """
-        def __init__(self, operation, left=None, right=None, value=None):
-            """
-            Initializes node of the expression tree.
-            operation - Operation object.
-            If not - NotSupportedOperationError is thrown.
-            Also left and right subtrees may be passed.
-            value - only for NUMBER and IDENTITY.
-            """
-            if not isinstance(operation, Operation):
-                raise NotSupportedOperationError(operation)
-            self.operation = operation
-            self.left = left
-            self.right = right
-            self.value = value
-
-        def value_in_point(self, values):
-            """
-            Return value in the current node, calculated for provided
-            values of the variables.
-            values - dictionary containing values for all needed variables, e.g.
-            {'x': 1, 'y': 2}
-            """
-            if self.is_number():
-                return self.value
-            if self.is_variable():
-                return values[self.value]
-
-            if self.is_unary():
-                return self.operation.action(self.left.value_in_point(values))
-
-            return self.operation.action(self.left.value_in_point(values),
-                                         self.right.value_in_point(values))
-
-        def height(self):
-            """
-            Returns height of the tree which root is the current node.
-            """
-            if self.is_number() or self.is_variable():
-                return 1
-            if self.is_unary():
-                return self.left.height() if self.left is not None else 0 + 1
-
-            return max(self.left.height() if self.left is not None else 0,
-                self.right.height() if self.right is not None else 0) + 1
-
-        def is_number(self):
-            """
-            Returns True only if the current node represents a number.
-            """
-            return self.operation.is_number()
-
-        def is_variable(self):
-            """
-            Returns True only if the current node represents a variable.
-            """
-            return self.operation.is_variable()
-
-        def is_unary(self):
-            """
-            Returns True only if the current node represents an unary operation.
-            Number and variable are not considered as unary operations.
-            """
-            return self.operation.is_unary()
-
-        def is_binary(self):
-            """
-            Returns True only if the current node represents a binary operations.
-            """
-            return self.operation.is_binary()
-
-        def simplify(self, accuracy=0.001):
-            """
-            Simplifies the current node and all its subtrees according
-            to the simple arithmetic rules.
-            Return True only if the current node or at least one
-            of its subtrees was modified during the simplification.
-            """
-            #TODO: add more rules
-
-            #leave only 3 digits after decimal point
-            if self.is_number():
-                self.value = round(self.value * 1000) / 1000
-
-            #calculate unary function for number
-            if self.is_unary() and self.left.is_number():
-                self.value = self.value_in_point({})
-                self.operation = Operations.NUMBER
-                self.left = None
-                return True
-
-            #calculate binary function for two numbers
-            if (self.is_binary() and self.left.is_number() and
-                    self.right.is_number()):
-                self.value = self.value_in_point({})
-                self.operation = Operations.NUMBER
-                self.left = self.right = None
-                return True
-
-            #calculate x / x
-            if (self.is_binary() and
-                    self.left.is_variable() and self.right.is_variable() and
-                    self.left.value == self.right.value and self.operation == Operations.DIVISION):
-                self.value = 1
-                self.operation = Operations.NUMBER
-                self.left = self.right = None
-                return True
-
-            #calculate x - x
-            if (self.is_binary() and
-                    self.left.is_variable() and self.right.is_variable() and
-                    self.left.value == self.right.value and self.operation == Operations.MINUS):
-                self.value = 0
-                self.operation = Operations.NUMBER
-                self.left = self.right = None
-                return True
-
-            #calculate x * 1 and x / 1
-            if (self.is_binary() and
-                    self.right.is_number() and abs(self.right.value - 1) < accuracy and
-                    (self.operation == Operations.DIVISION or self.operation == Operations.MULTIPLICATION)):
-                self._init_with_node(self.left)
-                self.simplify()
-                return True
-
-            #calculate 1 * x
-            if (self.is_binary() and
-                    self.left.is_number() and abs(self.left.value - 1) < accuracy and
-                    self.operation == Operations.MULTIPLICATION):
-                self._init_with_node(self.right)
-                self.simplify()
-                return True
-
-            result = False
-            if self.left is not None:
-                result_left = self.left.simplify()
-                result = result or result_left
-            if self.right is not None:
-                result_right = self.right.simplify()
-                result = result or result_right
-
-            return result
-
-        def _init_with_node(self, node):
-            self.operation = node.operation
-            self.value = node.value
-            self.left = node.left
-            self.right = node.right
-
-        def __str__(self):
-            """
-            Returns string representation of tree which root is the
-            current node.
-            All binary operation has a pair of parentheses.
-            """
-            if self.is_number() or self.is_variable():
-                return str(self.value)
-
-            if self.is_unary():
-                return self.operation.string_representation + '(' +\
-                       (str(self.left) if self.left is not None else 'None') + ')'
-
-            if self.is_binary():
-                return '(' + (str(self.left) if self.left is not None else 'None') +\
-                       ' ' + self.operation.string_representation + ' ' +\
-                       (str(self.right) if self.right is not None else 'None') + ')'
-
-        def __repr__(self):
-            """
-            Doesn't return valid Python expression.
-            Returns the same string representation as __str__ does.
-            """
-            return str(self)
 
     @classmethod
     def generate_number(cls):
@@ -334,7 +360,7 @@ class Expression:
         Generates random expression tree which height is not more than given
         max_height value with variable names from variables list.
         """
-        root = Expression.Node(Expression.generate_operator(only_binary=True))
+        root = Node(Expression.generate_operator(only_binary=True))
         current = [root]
         while len(current) > 0:
             node = current.pop(0)
@@ -347,15 +373,15 @@ class Expression:
                 continue
 
             if node.is_unary():
-                node.left = Expression.Node(Expression.generate_operator())
+                node.left = Node(Expression.generate_operator())
                 if root.height() > max_height:
                     node.left = None
                 else:
                     current.append(node.left)
 
             if node.is_binary():
-                node.left = Expression.Node(Expression.generate_operator())
-                node.right = Expression.Node(Expression.generate_operator())
+                node.left = Node(Expression.generate_operator())
+                node.right = Node(Expression.generate_operator())
                 if root.height() > max_height:
                     node.left = None
                     node.right = None

@@ -3,7 +3,7 @@ __author__ = 'Stanislav Ushakov'
 import unittest
 import pickle
 
-from expression import Expression, NotSupportedOperationError, Operations
+from expression import Expression, NotSupportedOperationError, Operations, Node
 from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem
 from exchanger import SimpleRandomExchanger
 
@@ -36,25 +36,25 @@ class OperationTest(unittest.TestCase):
 
 class ExpressionNodeTest(unittest.TestCase):
     def test_allowed_operation(self):
-        node = Expression.Node(Operations.MINUS)
+        node = Node(Operations.MINUS)
         self.assertEquals(node.operation, Operations.MINUS)
 
     def test_not_allowed_operation(self):
         self.assertRaises(NotSupportedOperationError,
-                          Expression.Node,
+                          Node,
                           'NOT_SUPPORTED_OPERATION')
 
     def test_value_in_point(self):
-        node = Expression.Node(Operations.MINUS,
-                left=Expression.Node(Operations.IDENTITY, value='x'),
-                right=Expression.Node(Operations.IDENTITY, value='y'))
+        node = Node(Operations.MINUS,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.IDENTITY, value='y'))
         result = node.value_in_point({'x': 2, 'y': 1})
         self.assertEqual(result, 1.0)
 
     def test_simplify_two_numbers(self):
-        node = Expression.Node(Operations.MINUS,
-            left=Expression.Node(Operations.NUMBER, value=2),
-            right=Expression.Node(Operations.NUMBER, value=2))
+        node = Node(Operations.MINUS,
+            left=Node(Operations.NUMBER, value=2),
+            right=Node(Operations.NUMBER, value=2))
         result = node.simplify()
         self.assertEqual(result, True)
         self.assertEqual(node.left, None)
@@ -62,17 +62,17 @@ class ExpressionNodeTest(unittest.TestCase):
         self.assertEqual(node.value, 0.0)
 
     def test_simplify_unary_and_number(self):
-        node = Expression.Node(Operations.SIN,
-            left=Expression.Node(Operations.NUMBER, value=0))
+        node = Node(Operations.SIN,
+            left=Node(Operations.NUMBER, value=0))
         result = node.simplify()
         self.assertEqual(result, True)
         self.assertEqual(node.left, None)
         self.assertEqual(node.value, 0.0)
 
     def test_simplify_identical_variables_division(self):
-        node = Expression.Node(Operations.DIVISION,
-            left=Expression.Node(Operations.IDENTITY, value='x'),
-            right=Expression.Node(Operations.IDENTITY, value='x'))
+        node = Node(Operations.DIVISION,
+            left=Node(Operations.IDENTITY, value='x'),
+            right=Node(Operations.IDENTITY, value='x'))
         result = node.simplify()
         self.assertEqual(result, True)
         self.assertEqual(node.left, None)
@@ -80,22 +80,41 @@ class ExpressionNodeTest(unittest.TestCase):
         self.assertEqual(node.value, 1.0)
 
     def test_simplify_multiply_by_one_right(self):
-        node = Expression.Node(Operations.MULTIPLICATION,
-            left=Expression.Node(Operations.IDENTITY, value='x'),
-            right=Expression.Node(Operations.NUMBER, value=1))
+        node = Node(Operations.MULTIPLICATION,
+            left=Node(Operations.IDENTITY, value='x'),
+            right=Node(Operations.NUMBER, value=1))
         result = node.simplify()
         self.assertEqual(result, True)
         self.assertEqual(node.operation, Operations.IDENTITY)
         self.assertEqual(node.value, 'x')
 
     def test_simplify_multiply_by_one_left(self):
-        node = Expression.Node(Operations.MULTIPLICATION,
-            left=Expression.Node(Operations.NUMBER, value=1),
-            right=Expression.Node(Operations.IDENTITY, value='x'))
+        node = Node(Operations.MULTIPLICATION,
+            left=Node(Operations.NUMBER, value=1),
+            right=Node(Operations.IDENTITY, value='x'))
         result = node.simplify()
         self.assertEqual(result, True)
         self.assertEqual(node.operation, Operations.IDENTITY)
         self.assertEqual(node.value, 'x')
+
+    def test_pickle_node(self):
+        node = Node(Operations.PLUS,
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.NUMBER, value=4)),
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='y'),
+                right=Node(Operations.NUMBER, value=2)))
+        returned_node = pickle.loads(pickle.dumps(node))
+        self.assertEqual(node.operation._operation_type, returned_node.operation._operation_type)
+        self.assertEqual(node.operation.action, returned_node.operation.action)
+        self.assertEqual(node.value, returned_node.value)
+        self.assertEqual(node.left.operation._operation_type, returned_node.left.operation._operation_type)
+        self.assertEqual(node.left.operation.action, returned_node.left.operation.action)
+        self.assertEqual(node.left.value, returned_node.left.value)
+        self.assertEqual(node.right.operation._operation_type, returned_node.right.operation._operation_type)
+        self.assertEqual(node.right.operation.action, returned_node.right.operation.action)
+        self.assertEqual(node.right.value, returned_node.right.value)
 
 class FitnessFunctionTest(unittest.TestCase):
     def setUp(self):
@@ -105,37 +124,37 @@ class FitnessFunctionTest(unittest.TestCase):
         self.f = FitnessFunction(values)
 
     def test_exact_value(self):
-        answer = Expression.Node(Operations.PLUS,
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='x'),
-                right=Expression.Node(Operations.NUMBER, value=4)),
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='y'),
-                right=Expression.Node(Operations.NUMBER, value=2)))
+        answer = Node(Operations.PLUS,
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.NUMBER, value=4)),
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='y'),
+                right=Node(Operations.NUMBER, value=2)))
         e = Expression(root=answer, variables=['x', 'y'])
         self.assertEqual(self.f.expression_value(e), 0.0)
 
     def test_wrong_value(self):
-        wrong = Expression.Node(Operations.MINUS,
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='x'),
-                right=Expression.Node(Operations.NUMBER, value=4)),
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='y'),
-                right=Expression.Node(Operations.NUMBER, value=2)))
+        wrong = Node(Operations.MINUS,
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.NUMBER, value=4)),
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='y'),
+                right=Node(Operations.NUMBER, value=2)))
         e = Expression(root=wrong, variables=['x', 'y'])
         self.assertGreater(self.f.expression_value(e), 0.0)
 
 
 class ExpressionMutatorTest(unittest.TestCase):
     def setUp(self):
-        root = Expression.Node(Operations.PLUS,
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='x'),
-                right=Expression.Node(Operations.NUMBER, value=4)),
-            Expression.Node(Operations.MULTIPLICATION,
-                left=Expression.Node(Operations.IDENTITY, value='y'),
-                right=Expression.Node(Operations.NUMBER, value=2)))
+        root = Node(Operations.PLUS,
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.NUMBER, value=4)),
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='y'),
+                right=Node(Operations.NUMBER, value=2)))
         self.f = Expression(root=root, variables=['x', 'y'])
 
     def test_number_mutation(self):
