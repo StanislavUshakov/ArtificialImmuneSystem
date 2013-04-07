@@ -302,12 +302,16 @@ class Node:
         return str(self)
 
     #serializing stuff
+
     _left_node_dict_key = 'left'
     _right_node_dict_key = 'right'
     _operation_dict_key = 'operation'
     _value_dict_key = 'value'
 
     def __getstate__(self):
+        """
+        Override this method due to pickling instance.
+        """
         result = {self._operation_dict_key: self.operation.__getstate__(),
                   self._value_dict_key: self.value}
         if self.left is not None:
@@ -317,6 +321,9 @@ class Node:
         return result
 
     def __setstate__(self, state):
+        """
+        This method is being called while unpickling.
+        """
         self.value = state[self._value_dict_key]
         self.operation = Operation(None, None)
         self.operation.__setstate__(state[self._operation_dict_key])
