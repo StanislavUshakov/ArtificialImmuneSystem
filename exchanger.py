@@ -84,8 +84,10 @@ class GetterThread(Thread):
         Main thread method. Creates socket, receives data, unpickle it
         and call setter function.
         """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.host, self.port))
+
             #send dummy data
             sock.sendall(bytes("Give me", "utf-8"))
             received = sock.recv(1024)
@@ -95,6 +97,8 @@ class GetterThread(Thread):
                 received += data
             lymphocytes = pickle.loads(received)
             self.lymphocytes_setter(lymphocytes)
+        finally:
+            sock.close()
 
 
 class PeerToPeerExchanger:
