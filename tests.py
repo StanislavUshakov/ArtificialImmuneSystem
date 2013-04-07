@@ -116,6 +116,28 @@ class ExpressionNodeTest(unittest.TestCase):
         self.assertEqual(node.right.operation.action, returned_node.right.operation.action)
         self.assertEqual(node.right.value, returned_node.right.value)
 
+class ExpressionTest(unittest.TestCase):
+    def test_pickle_expression(self):
+        node = Node(Operations.PLUS,
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='x'),
+                right=Node(Operations.NUMBER, value=4)),
+            Node(Operations.MULTIPLICATION,
+                left=Node(Operations.IDENTITY, value='y'),
+                right=Node(Operations.NUMBER, value=2)))
+        e = Expression(root=node, variables=['x', 'y'])
+        returned_expression = pickle.loads(pickle.dumps(e))
+        self.assertEqual(e.variables, returned_expression.variables)
+        self.assertEqual(e.root.operation._operation_type, returned_expression.root.operation._operation_type)
+        self.assertEqual(e.root.operation.action, returned_expression.root.operation.action)
+        self.assertEqual(e.root.value, returned_expression.root.value)
+        self.assertEqual(e.root.left.operation._operation_type, returned_expression.root.left.operation._operation_type)
+        self.assertEqual(e.root.left.operation.action, returned_expression.root.left.operation.action)
+        self.assertEqual(e.root.left.value, returned_expression.root.left.value)
+        self.assertEqual(e.root.right.operation._operation_type, returned_expression.root.right.operation._operation_type)
+        self.assertEqual(e.root.right.operation.action, returned_expression.root.right.operation.action)
+        self.assertEqual(e.root.right.value, returned_expression.root.right.value)
+
 class FitnessFunctionTest(unittest.TestCase):
     def setUp(self):
         values = [({'x': i , 'y': j}, 4 * i + 2 * j)
