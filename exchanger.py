@@ -27,6 +27,40 @@ class SimpleRandomExchanger:
         """
         return self.generator()
 
+class LocalhostNodesManager:
+    """
+    This class is used for getting information about other running nodes.
+    This class simply returns ports on current machine.
+    """
+    def __init__(self, node_number, all_nodes):
+        """
+        Initializes manager with the number of the current node and number of
+        all nodes.
+        """
+        self.self_host = 'localhost'
+        self.base_port = 5000
+        self.self_port = self.base_port + node_number
+        self.other_nodes = [(self.self_host, p)
+                       for p in range(self.base_port + 1, self.base_port + all_nodes + 1)
+                       if p != self.self_port]
+        self.other_nodes_len = all_nodes - 1
+        self.current_node = 0
+
+    def get_self_address(self):
+        """
+        Returns address of the current node in form(host, port).
+        """
+        return self.self_host, self.self_port
+
+    def get_next_node_address(self):
+        """
+        Returns address of the next running node to exchange.
+        (host, port)
+        """
+        result = self.other_nodes[self.current_node]
+        self.current_node = (self.current_node + 1) % self.other_nodes_len
+        return result
+
 class TCPHandler(BaseRequestHandler):
     """
     The RequestHandler class for this node.

@@ -5,7 +5,7 @@ import pickle
 
 from expression import Expression, NotSupportedOperationError, Operations, Node
 from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem
-from exchanger import SimpleRandomExchanger
+from exchanger import SimpleRandomExchanger, LocalhostNodesManager
 
 class OperationTest(unittest.TestCase):
     def test_pickle_number(self):
@@ -186,6 +186,17 @@ class ExpressionMutatorTest(unittest.TestCase):
         original_value = self.f.value_in_point(point)
         mutated_value = mutator.expression.value_in_point(point)
         self.assertNotEqual(original_value, mutated_value)
+
+class LocalhostNodesManagerTest(unittest.TestCase):
+    def test_self_address(self):
+        manager = LocalhostNodesManager(1, 2)
+        self.assertEqual(manager.get_self_address()[0], 'localhost')
+        self.assertGreaterEqual(manager.get_self_address()[1], 1024)
+
+    def test_nodes_address(self):
+        manager = LocalhostNodesManager(1, 2)
+        self.assertEqual(manager.get_next_node_address()[0], 'localhost')
+        self.assertNotEqual(manager.get_self_address()[1], manager.get_next_node_address()[1])
 
 class ExpressionsImmuneSystemTest(unittest.TestCase):
     def test_solve_is_not_crashing(self):
