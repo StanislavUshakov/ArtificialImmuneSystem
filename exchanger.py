@@ -103,14 +103,13 @@ class GetterThread(Thread):
     """
     This Thread class is used for getting lymphocytes from another node.
     """
-    def __init__(self, node_host, node_port, lymphocytes_setter):
+    def __init__(self, node_address, lymphocytes_setter):
         """
         Initializes thread with the address of node being requested and
         method that will store received lymphocytes.
         """
         Thread.__init__(self)
-        self.host = node_host
-        self.port = node_port
+        self.address = node_address
         self.lymphocytes_setter = lymphocytes_setter
 
     def run(self):
@@ -120,7 +119,7 @@ class GetterThread(Thread):
         """
         try:
             sock =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((self.host, self.port))
+            sock.connect(self.address)
 
             #send dummy data
             sock.sendall(bytes("Give me", "utf-8"))
@@ -138,26 +137,27 @@ class GetterThread(Thread):
 class PeerToPeerExchanger:
     """
     Class represents p2p exchanger. Addresses of the other peers are
-    provided in __init__ method. Connect to one of this nodes and ask
+    provided by special manager object. Connect to one of this nodes and ask
     for lymphocytes.
     """
-    def __init__(self, host, port, nodes_addresses):
+    def __init__(self, nodes_manager):
         """
         Initializes exchanger with the host and port of this node.
         nodes_addresses - list of (host, port) other nodes addresses.
         """
         self.lock_to_exchange = Lock()
         self.lock_to_return = Lock()
-        self.nodes_addresses = nodes_addresses
+        self.nodes_manager = nodes_manager
 
         #start server thread
-        self.server_thread = ServerThread(host, port, self._get_lymphocytes_to_exchange)
+        self.server_thread = ServerThread(self.nodes_manager.get_self_address()[0],
+                                          self.nodes_manager.get_self_address()[1],
+                                          self._get_lymphocytes_to_exchange)
         self.server_thread.setDaemon(daemonic=True)
         self.server_thread.start()
 
         #prepare lymphocytes to return
         self.to_return = []
-        self.node_to_receive = 0
         self._receive_lymphocytes()
 
         self.to_exchange = []
@@ -207,8 +207,6 @@ class PeerToPeerExchanger:
         """
         Starts thread that is getting lymphocytes from another node.
         """
-        getter_thread = GetterThread(self.nodes_addresses[self.node_to_receive][0],
-            self.nodes_addresses[self.node_to_receive][1],
-            self._set_lymphocytes_to_return)
+        getter_thread = GetterThread(self.nodes_manager.get_next_node_address(),
+                                     self._set_lymphocytes_to_return)
         getter_thread.start()
-        self.node_to_receive = (self.node_to_receive + 1) % len(self.nodes_addresses)

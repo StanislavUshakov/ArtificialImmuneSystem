@@ -1,7 +1,7 @@
 __author__ = 'Stanislav Ushakov'
 
 from immune import ExpressionsImmuneSystem
-from exchanger import PeerToPeerExchanger
+from exchanger import PeerToPeerExchanger, LocalhostNodesManager
 import random
 import math
 import sys
@@ -10,13 +10,7 @@ import sys
 if __name__ == '__main__':
     number = int(sys.argv[1])
     number_of_nodes = int(sys.argv[2])
-    host = 'localhost'
-    base_port = 5000
-    port = base_port + number
-    other_nodes = [(host, p)
-                   for p in range(base_port + 1, base_port + number_of_nodes + 1)
-                   if p != port]
-    print(other_nodes)
+    nodes_manager = LocalhostNodesManager(number, number_of_nodes)
     values = []
     variables = ['x']
     number_of_lymphocytes = 150
@@ -27,7 +21,7 @@ if __name__ == '__main__':
         y = (0.5 - random.random()) * 50
         values.append(({'x': x}, x*x + x*math.sin(x) ))
 
-    exchanger = PeerToPeerExchanger(host, port, other_nodes)
+    exchanger = PeerToPeerExchanger(nodes_manager)
 
     results = []
     immuneSystem = ExpressionsImmuneSystem(exact_values=values,
