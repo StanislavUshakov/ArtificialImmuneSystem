@@ -247,3 +247,50 @@ class ExpressionsImmuneSystem:
         for (i, e) in enumerate(self.lymphocytes):
             fitness_values.append((i, self.fitness_function.expression_value(e)))
         return sorted(fitness_values, key=lambda item: item[1])
+
+class DataFileStorageHelper:
+    """
+    This helper class is used for storing exact function values in file and
+    retrieving them.
+    """
+    @classmethod
+    def save_to_file(cls, filename, variables, function, points_number,
+                     min_point=-5.0, max_point=5.0):
+        """
+        Saves values of the function in randomly generated points.
+        """
+        values = []
+        for i in range(0, points_number):
+            arg_dict = {}
+            for arg in variables:
+                arg_dict[arg] = random.random() * (max_point - min_point) + min_point
+            values.append((arg_dict, function(*arg_dict.values())))
+        output = open(filename, 'w')
+        for arg in variables:
+            print(arg, end=' ', file=output)
+        print(file=output)
+        for (arg, f) in values:
+            for var in variables:
+                print(arg[var], end=' ', file=output)
+            print(f, file=output)
+        output.close()
+
+    @classmethod
+    def load_from_file(cls, filename):
+        """
+        Loads values of the function from file.
+        Returns tuple (variables, values), where
+        variables - list of variable names,
+        values - list of ({'x': 0, 'y': 0}, 0)
+        """
+        input = open(filename)
+        values = []
+        variables = input.readline().split()
+        for s in input:
+            arg = s.split()[:-1]
+            f = s.split()[-1]
+            arg_dict = {}
+            for i in range(0, len(variables)):
+                arg_dict[variables[i]] = float(arg[i])
+            values.append((arg_dict, float(f)))
+        return variables, values

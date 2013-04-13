@@ -1,6 +1,6 @@
 __author__ = 'Stanislav Ushakov'
 
-from immune import ExpressionsImmuneSystem
+from immune import ExpressionsImmuneSystem, DataFileStorageHelper
 from exchanger import PeerToPeerExchanger, LocalhostNodesManager
 import random
 import math
@@ -11,15 +11,10 @@ if __name__ == '__main__':
     number = int(sys.argv[1])
     number_of_nodes = int(sys.argv[2])
     nodes_manager = LocalhostNodesManager(number, number_of_nodes)
-    values = []
-    variables = ['x']
     number_of_lymphocytes = 150
     max_height = 4
 
-    for i in range(0,50):
-        x = (0.5 - random.random()) * 50
-        y = (0.5 - random.random()) * 50
-        values.append(({'x': x}, x*x + x*math.sin(x) ))
+    variables, values = DataFileStorageHelper.load_from_file('test_x_y.txt')
 
     exchanger = PeerToPeerExchanger(nodes_manager)
 
