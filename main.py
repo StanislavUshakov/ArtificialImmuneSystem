@@ -4,7 +4,7 @@ import math
 import time
 
 from expression import Expression
-from immune import ExpressionsImmuneSystem, FitnessFunction, DataFileStorageHelper
+from immune import ExpressionsImmuneSystem, FitnessFunction, DataFileStorageHelper, ExpressionsImmuneSystemConfig
 from exchanger import SimpleRandomExchanger
 
 def update_progress(progress:int):
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     number_of_lymphocytes = 100
     max_height = 4
 
-    #DataFileStorageHelper.save_to_file('test_x_y.txt', variables, lambda x, y: x*x + y*y*math.sin(x), 50)
+    DataFileStorageHelper.save_to_file('test_x_y.txt', ['x', 'y'], lambda x, y: x*x + x*y*math.sin(x*y), 100)
 
     variables, values = DataFileStorageHelper.load_from_file('test_x_y.txt')
 
@@ -26,6 +26,8 @@ if __name__ == "__main__":
         lambda: [Expression.generate_random(max_height=max_height, variables=variables)
                 for i in range(0, number_of_lymphocytes // 2)])
 
+    config = ExpressionsImmuneSystemConfig()
+
     results = []
     iterations = 5
     start = time.clock()
@@ -33,9 +35,7 @@ if __name__ == "__main__":
         immuneSystem = ExpressionsImmuneSystem(exact_values=values,
             variables=variables,
             exchanger=exchanger,
-            number_of_lymphocytes=number_of_lymphocytes,
-            maximal_height=max_height,
-            number_of_iterations=15)
+            config=config)
         best = immuneSystem.solve()
         results.append((f.expression_value(best), str(best)))
         update_progress(int((i+1) / iterations * 100))

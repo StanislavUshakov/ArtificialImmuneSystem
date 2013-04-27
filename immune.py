@@ -3,6 +3,7 @@ __author__ = 'Stanislav Ushakov'
 import math
 import random
 import copy
+import json
 
 from expression import Expression, Operations
 
@@ -143,6 +144,53 @@ class ExpressionMutator:
 
         return nodes
 
+class ExpressionsImmuneSystemConfig:
+    """
+    This class is used for storing immune system config.
+    Config is stored in json file.
+    """
+
+    #config file name
+    _filename = "config.json"
+
+    #default values
+    _number_of_lymphocytes_default = 100
+    _number_of_iterations_default = 100
+    _number_of_iterations_to_exchange_default = 25
+    _maximal_height_default = 4
+
+    def __init__(self):
+        """
+        Initializes config object with values retrieved from config file.
+        """
+        try:
+            file = open(ExpressionsImmuneSystemConfig._filename)
+            config = json.load(file)
+            file.close()
+        except IOError:
+            config = None
+        if config is None:
+            self.number_of_lymphocytes = ExpressionsImmuneSystemConfig._number_of_lymphocytes_default
+            self.number_of_iterations = ExpressionsImmuneSystemConfig._number_of_iterations_default
+            self.number_of_iterations_to_exchange = ExpressionsImmuneSystemConfig._number_of_iterations_to_exchange_default
+            self.maximal_height = ExpressionsImmuneSystemConfig._maximal_height_default
+        else:
+            self.number_of_lymphocytes = config['number_of_lymphocytes']
+            self.number_of_iterations = config['number_of_iterations']
+            self.number_of_iterations_to_exchange = config['number_of_iterations_to_exchange']
+            self.maximal_height = config['maximal_height']
+
+    def save(self):
+        """
+        Saves current configuration to config file.
+        """
+        file = open(ExpressionsImmuneSystemConfig._filename, mode='w')
+        config = {'number_of_lymphocytes': self.number_of_lymphocytes,
+                  'number_of_iterations': self.number_of_iterations,
+                  'number_of_iterations_to_exchange': self.number_of_iterations_to_exchange,
+                  'maximal_height': self.maximal_height}
+        json.dump(config, file)
+        file.close()
 
 class ExpressionsImmuneSystem:
     """
@@ -151,13 +199,10 @@ class ExpressionsImmuneSystem:
     On each step the best lymphocytes are selected for the mutation.
     """
 
-    def __init__(self, exact_values, variables, exchanger,
-                 number_of_lymphocytes=100, number_of_iterations=50,
-                 number_of_iterations_to_exchange=25,
-                 maximal_height=4):
+    def __init__(self, exact_values, variables, exchanger, config):
         """
-        Initializes the immune system with the provided parameters (or
-        default parameters if not provided).
+        Initializes the immune system with the exact_values, list of variables,
+        exchanger object and config object.
         lymphocytes - list that stores current value of the whole system.
         """
         self.exact_values = exact_values
@@ -166,14 +211,12 @@ class ExpressionsImmuneSystem:
         self.exchanger = exchanger
 
         #config
-        self.number_of_lymphocytes = number_of_lymphocytes
-        self.number_of_iterations = number_of_iterations
-        self.number_of_iterations_to_exchange = number_of_iterations_to_exchange
+        self.config = config
 
         self.lymphocytes = []
-        for i in range(0, self.number_of_lymphocytes):
+        for i in range(0, self.config.number_of_lymphocytes):
             self.lymphocytes.append(Expression.generate_random(
-                                        maximal_height,
+                                        self.config.maximal_height,
                                         variables))
 
         #Initialize Exchanger with the first generated lymphocytes
@@ -186,9 +229,9 @@ class ExpressionsImmuneSystem:
         After defined number of steps returns the best lymphocyte as
         an answer.
         """
-        for i in range(0, self.number_of_iterations):
+        for i in range(0, self.config.number_of_iterations):
             #if we reach exchanging step
-            if i % self.number_of_iterations_to_exchange:
+            if i % self.config.number_of_iterations_to_exchange:
                 self.exchanging_step()
             else:
                 self.step()
@@ -209,7 +252,7 @@ class ExpressionsImmuneSystem:
         """
         sorted_lymphocytes = self._get_sorted_lymphocytes_index_and_value()
         best = []
-        for (i, e) in sorted_lymphocytes[:self.number_of_lymphocytes // 2]:
+        for (i, e) in sorted_lymphocytes[:self.config.number_of_lymphocytes // 2]:
             best.append(self.lymphocytes[i])
         mutated = [ExpressionMutator(e).mutation() for e in best]
         self.lymphocytes = best + mutated
@@ -227,7 +270,7 @@ class ExpressionsImmuneSystem:
         #get only best - as many as we need
         sorted_lymphocytes = self._get_sorted_lymphocytes_index_and_value()
         best = []
-        for (i, e) in sorted_lymphocytes[:self.number_of_lymphocytes]:
+        for (i, e) in sorted_lymphocytes[:self.config.number_of_lymphocytes]:
             best.append(self.lymphocytes[i])
 
         self.lymphocytes = best

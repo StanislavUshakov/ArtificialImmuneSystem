@@ -4,7 +4,7 @@ import unittest
 import pickle
 
 from expression import Expression, NotSupportedOperationError, Operations, Node
-from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem
+from immune import FitnessFunction, ExpressionMutator, ExpressionsImmuneSystem, ExpressionsImmuneSystemConfig
 from exchanger import SimpleRandomExchanger, LocalhostNodesManager
 
 class OperationTest(unittest.TestCase):
@@ -210,10 +210,13 @@ class ExpressionsImmuneSystemTest(unittest.TestCase):
             lambda: [Expression.generate_random(max_height=2, variables=['x'])
                      for i in range(0, 5)])
 
+        config = ExpressionsImmuneSystemConfig()
+        config.number_of_lymphocytes = 10
+        config.number_of_iterations = 5
+
         immuneSystem = ExpressionsImmuneSystem(exact_values=values,
                 variables=['x'],
-                number_of_lymphocytes=10,
-                number_of_iterations=5,
-                exchanger=exchanger)
+                exchanger=exchanger,
+                config=config)
         best = immuneSystem.solve()
         self.assertGreaterEqual(f.expression_value(best), 0)
