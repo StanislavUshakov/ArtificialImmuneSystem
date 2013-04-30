@@ -130,6 +130,10 @@ class GetterThread(Thread):
                 received += data
             lymphocytes = pickle.loads(received)
             self.lymphocytes_setter(lymphocytes)
+        except ConnectionRefusedError:
+            #Don't bother. May be it's better to add more logic to determine
+            #permanent connection errors.
+            pass
         finally:
             sock.close()
 

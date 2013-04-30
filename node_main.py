@@ -10,8 +10,12 @@ if __name__ == '__main__':
     number_of_nodes = int(sys.argv[2])
 
     nodes_manager = LocalhostNodesManager(number, number_of_nodes)
+
     config = ExpressionsImmuneSystemConfig()
-    config.number_of_lymphocytes = 150
+    config.number_of_lymphocytes = 200
+    config.number_of_iterations = 200
+    config.number_of_iterations_to_exchange = 30
+    config.maximal_height = 5
 
     variables, values = DataFileStorageHelper.load_from_file('test_x_y.txt')
 
