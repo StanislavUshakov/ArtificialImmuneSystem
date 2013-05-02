@@ -229,20 +229,22 @@ class ExpressionsImmuneSystem:
         After defined number of steps returns the best lymphocyte as
         an answer.
         """
+        def return_best():
+            best = self.best()
+            best.simplify()
+            return best
+
         for i in range(0, self.config.number_of_iterations):
             #if we reach exchanging step
-            if i % self.config.number_of_iterations_to_exchange:
+            if i != 0 and i % self.config.number_of_iterations_to_exchange == 0:
                 self.exchanging_step()
             else:
                 self.step()
             best = self.best()
             if self.fitness_function.expression_value(best) <= accuracy:
-                best.simplify()
-                return best
+                return return_best()
 
-        best = self.best()
-        best.simplify()
-        return best
+        return return_best()
 
     def step(self):
         """
